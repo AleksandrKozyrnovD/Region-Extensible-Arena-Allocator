@@ -8,11 +8,11 @@ So it means that it needs low overhead and logic to allocate and deallocate obje
 My implementation is based on dynamically allocated memory regions on demand with configurable alignment with stack-like properties. When freed, offset position is moved relatively/absolutely to what you gave. Once memory region is allocated, it remains allocated until arena is destroyed. It means that if sufficiently large number of objects allocated and then released, all memory regions will stay for future usage. 
 
 ## Usage
-1. Copy arena.h arena.c in your project
-2. Include arena.h in your project
-3. Compile arena.c with your application
+1. Copy `arena.h` and `arena.c` in your project
+2. Include `arena.h` in your project
+3. Compile `arena.c` with your application
 
-Example main.c (of any other .c file)
+Example main.c (or any other .c file)
 ```c
 #include "arena.h"
 
