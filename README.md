@@ -1,1 +1,6 @@
-init readme
+[Arena allocator](https://en.m.wikipedia.org/wiki/Region-based_memory_management), or region based allocators in general, is a type of memory management in which each allocated object is assigned to a region. A region, also called a partition, subpool, zone, arena, area, or memory context, is a collection of allocated objects that can be efficiently reallocated or deallocated all at once.
+
+So it means that it need low overhead and logic to allocate and deallocate objects. Because all memory resides in big regions, one free is needed to clear all allocated objects. It massively simplifies complex lifetime object management. For example one way list. Tail nodes' lifetime is dependent on head node lifetime (you cant free tail node before freeing head node as it can cause memory leak or UB). There also tree-like lifetime dependencies with n layers of object lifetimes. If all these objects will be inside one contigious region, one free is needed and no complex logic is required. Also it can propogate across all codepaths easily.
+
+
+My implementation is based on dynamically allocated memory regions on demand with configurable alignment. When freed, offset position is moved relatively/absolutely to what you gave. Once memory region is allocated, it remains allocated until arena is destroyed. It means that if sufficiently large number of objects allocated and then released, all memory regions will stay for future usage. 
