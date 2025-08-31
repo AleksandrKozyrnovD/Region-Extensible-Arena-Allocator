@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 #define DEFAULT_REGION_SIZE 4096
-#define DEFAULT_ALINGMENT 8
+#define DEFAULT_ALINGMENT 1
 
 #ifdef __cplusplus
 extern "C" {
