@@ -32,7 +32,7 @@ void arena_destroy(struct arena *arena)
 
 static size_t align_offset(size_t offset, size_t alingment)
 {
-    return (offset + alingment - 1) & ~(alingment - 1); 
+    return (offset + alingment - 1) & ~(alingment - 1);
 }
 
 void *arena_alloc(struct arena *arena, size_t size)
@@ -96,7 +96,7 @@ void *arena_alloc(struct arena *arena, size_t size)
         region->prev = arena->current;
     }
     arena->current = region;
-    
+
     aligned_offset = align_offset(0, arena->alignment);
     arena->offset = aligned_offset + size;
     region->used = arena->offset;
@@ -131,6 +131,10 @@ void arena_free(struct arena *arena, size_t size)
 
         if (size <= arena->offset)
         {
+            size_t already_freed = arena->region_size - arena->offset;
+            size = already_freed > size
+                ? 0
+                : size - already_freed;
             arena->offset -= size;
             arena->total_offset -= size;
             arena->current->used = arena->offset;
@@ -165,7 +169,7 @@ void arena_set_pos_back(struct arena *arena, size_t pos)
 {
     if (!arena || pos > arena->total_offset)
         return;
-    
+
     size_t to_free = arena->total_offset - pos;
     arena_free(arena, to_free);
 }
