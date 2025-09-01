@@ -8,6 +8,8 @@ struct arena *arena_create(void)
     struct arena *arena = (struct arena *)malloc(sizeof(struct arena));
     if (!arena)
         return NULL;
+
+    rwlock_init(&arena->lock);
     arena->head = NULL;
     arena->current = NULL;
     arena->region_size = DEFAULT_REGION_SIZE;
@@ -41,6 +43,7 @@ void *arena_alloc(struct arena *arena, size_t size)
         return NULL;
 
     size_t aligned_offset = 0;
+    write_lock(&arena->lock);
     if (arena->current)
     {
         aligned_offset = align_offset(arena->offset, arena->alignment);
@@ -51,6 +54,7 @@ void *arena_alloc(struct arena *arena, size_t size)
             arena->offset = aligned_offset + size;
             arena->current->used = arena->offset;
             arena->total_offset += diff;
+            write_unlock(&arena->lock);
             return ptr;
         }
     }
@@ -59,6 +63,7 @@ void *arena_alloc(struct arena *arena, size_t size)
     size_t region_size = arena->region_size;
     if (required_size > region_size)
     {
+        write_unlock(&arena->lock);
         return NULL;
     }
 
@@ -69,15 +74,20 @@ void *arena_alloc(struct arena *arena, size_t size)
         arena->offset = aligned_offset + size;
         arena->current->used = arena->offset;
         arena->total_offset += size;
+        write_unlock(&arena->lock);
         return arena->current->base + aligned_offset;
     }
     struct arena_region *region = (struct arena_region *)malloc(sizeof(struct arena_region));
     if (!region)
+    {
+        write_unlock(&arena->lock);
         return NULL;
+    }
     region->base = (char *)malloc(region_size);
     if (!region->base)
     {
         free(region);
+        write_unlock(&arena->lock);
         return NULL;
     }
     region->size = region_size;
@@ -101,6 +111,7 @@ void *arena_alloc(struct arena *arena, size_t size)
     arena->offset = aligned_offset + size;
     region->used = arena->offset;
     arena->total_offset += size;
+    write_unlock(&arena->lock);
 
     return region->base + aligned_offset;
 }
@@ -108,8 +119,10 @@ void *arena_alloc(struct arena *arena, size_t size)
 void *arena_calloc(struct arena *arena, size_t size)
 {
     void *ptr = arena_alloc(arena, size);
+    write_lock(&arena->lock);
     if (ptr)
         memset(ptr, 0, size);
+    write_unlock(&arena->lock);
     return ptr;
 }
 
@@ -119,6 +132,7 @@ void arena_free(struct arena *arena, size_t size)
     if (!arena || size == 0)
         return;
     size = (size > arena->total_offset) ? arena->total_offset : size;
+    write_lock(&arena->lock);
     while (size > 0)
     {
         if (!arena->current)
@@ -158,11 +172,15 @@ void arena_free(struct arena *arena, size_t size)
             }
         }
     }
+    write_unlock(&arena->lock);
 }
 
 size_t arena_get_pos(struct arena *arena)
 {
-    return arena ? arena->total_offset : 0;
+    read_lock(&arena->lock);
+    size_t result = arena ? arena->total_offset : 0;
+    read_unlock(&arena->lock);
+    return result;
 }
 
 void arena_set_pos_back(struct arena *arena, size_t pos)
@@ -192,9 +210,11 @@ void print_region(struct arena_region *region)
 void print_regions(struct arena *arena)
 {
     struct arena_region *region = arena->head;
+    read_lock(&arena->lock);
     while (region)
     {
         print_region(region);
         region = region->next;
     }
+    read_unlock(&arena->lock);
 }

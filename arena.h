@@ -6,6 +6,8 @@
 #define DEFAULT_REGION_SIZE 4096
 #define DEFAULT_ALINGMENT 1
 
+#include "rwlock.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,6 +28,8 @@ struct arena
     size_t alignment;
     size_t offset;
     size_t total_offset;
+
+    rwlock_t lock;
 };
 
 #ifdef __ARENADEBUG__
@@ -47,7 +51,6 @@ void arena_clear(struct arena *arena);
 
 #ifdef __ARENA_IMPL__
 
-#include "arena.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
